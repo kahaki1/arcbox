@@ -80,7 +80,7 @@ Sign-in is Google or email + 6-digit code. Firebase Auth holds the user; Firesto
 1. Create a Firebase project and enable **Authentication → Google**.
 2. Create a Firestore database (production mode is fine — the Admin SDK bypasses rules).
 3. Deploy `firestore.rules` (clients have no direct access).
-4. Add `onixmcp.vercel.app` and `localhost` under Authentication → Settings → Authorized domains.
+4. Add `onixmpc.vercel.app` and `localhost` under Authentication → Settings → Authorized domains.
 5. Project settings → service account → generate a private key.
 6. Project settings → Your apps → Web app: copy apiKey, authDomain, appId.
 
@@ -93,7 +93,7 @@ For email codes, set `RESEND_API_KEY` (or install the Firebase **Trigger Email**
 3. Set these environment variables in the Vercel project:
 
 ```env
-PUBLIC_URL=https://onixmcp.vercel.app
+PUBLIC_URL=https://onixmpc.vercel.app
 COOKIE_SECRET=
 CIRCLE_API_KEY=
 CIRCLE_ENTITY_SECRET=
