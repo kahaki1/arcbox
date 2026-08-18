@@ -1,22 +1,12 @@
-import { randomUUID } from "node:crypto";
 import { config } from "../config.js";
 import { store, type WalletRecord } from "../store.js";
-import { getCircleClient } from "./client.js";
+import { createArcWallet, createWalletSet, listWalletBalances } from "./rest.js";
 
 async function ensureWalletSetId(): Promise<string> {
   if (config.circleWalletSetId) return config.circleWalletSetId;
   const existing = store.getWalletSetId();
   if (existing) return existing;
-
-  const client = await getCircleClient();
-  const response = await client.createWalletSet({
-    name: "ArcBox ChatGPT users",
-    idempotencyKey: randomUUID(),
-  });
-  const id = response.data?.walletSet?.id;
-  if (!id) {
-    throw new Error("Circle did not return a wallet set id.");
-  }
+  const id = await createWalletSet("ArcBox ChatGPT users");
   store.setWalletSetId(id);
   return id;
 }
@@ -25,27 +15,14 @@ export async function ensureUserWallet(userId: string): Promise<WalletRecord> {
   const existing = store.getWalletByUserId(userId);
   if (existing) return existing;
 
-  const client = await getCircleClient();
   const walletSetId = await ensureWalletSetId();
-  const response = await client.createWallets({
-    walletSetId,
-    blockchains: [config.circleBlockchain],
-    count: 1,
-    accountType: "EOA",
-    idempotencyKey: randomUUID(),
-    metadata: [{ name: `arcbox:${userId}` }],
-  });
-
-  const wallet = response.data?.wallets?.[0];
-  if (!wallet?.id || !wallet.address) {
-    throw new Error("Circle wallet creation returned no address.");
-  }
+  const wallet = await createArcWallet(walletSetId, userId);
 
   return store.saveWallet({
     userId,
     circleWalletId: wallet.id,
     address: wallet.address,
-    blockchain: wallet.blockchain ?? config.circleBlockchain,
+    blockchain: wallet.blockchain,
     accountType: "EOA",
     createdAt: new Date().toISOString(),
   });
@@ -58,13 +35,7 @@ export type TokenBalance = {
 };
 
 export async function getWalletBalances(walletId: string): Promise<TokenBalance[]> {
-  const client = await getCircleClient();
-  const response = await client.getWalletTokenBalance({ id: walletId });
-  return (response.data?.tokenBalances ?? []).map((row) => ({
-    symbol: row.token?.symbol ?? "UNKNOWN",
-    amount: row.amount ?? "0",
-    tokenAddress: row.token?.tokenAddress,
-  }));
+  return listWalletBalances(walletId);
 }
 
 export function usdcBalance(balances: TokenBalance[]): string {

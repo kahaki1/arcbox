@@ -189,7 +189,7 @@ export function dashboardPage(input: {
         <div class="card">
           <div class="n">WALLET</div>
           <h3>${input.address ? "Assigned" : "Not created yet"}</h3>
-          <p class="mono">${escapeHtml(input.address ?? "Sign in again after adding Circle API keys.")}</p>
+          <p class="mono">${escapeHtml(input.address ?? "No wallet yet. Refresh after signup, or check the error below.")}</p>
           ${
             input.address
               ? `<p style="margin-top:12px"><a href="${config.explorerBase}/address/${escapeHtml(

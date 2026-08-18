@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { circleConfigured, config } from "../config.js";
 import { store } from "../store.js";
 import type { WalletRecord } from "../store.js";
+import { loadCjs } from "./load-cjs.js";
 
 type AppKitModule = typeof import("@circle-fin/app-kit");
 type AdapterModule = typeof import("@circle-fin/adapter-circle-wallets");
@@ -10,20 +11,22 @@ type SendParams = import("@circle-fin/app-kit").SendParams;
 let kit: InstanceType<AppKitModule["AppKit"]> | null = null;
 let adapter: ReturnType<AdapterModule["createCircleWalletsAdapter"]> | null = null;
 
-async function getKit() {
+function getKit() {
   if (!kit) {
-    const { AppKit } = await import("@circle-fin/app-kit");
+    const { AppKit } = loadCjs<AppKitModule>("@circle-fin/app-kit");
     kit = new AppKit();
   }
   return kit;
 }
 
-async function getAdapter() {
+function getAdapter() {
   if (!circleConfigured()) {
     throw new Error("Circle credentials are missing.");
   }
   if (!adapter) {
-    const { createCircleWalletsAdapter } = await import("@circle-fin/adapter-circle-wallets");
+    const { createCircleWalletsAdapter } = loadCjs<AdapterModule>(
+      "@circle-fin/adapter-circle-wallets",
+    );
     adapter = createCircleWalletsAdapter({
       apiKey: config.circleApiKey,
       entitySecret: config.circleEntitySecret,
@@ -45,10 +48,10 @@ export function validateSendInput(to: string, amount: string): string | null {
   return null;
 }
 
-async function sendParams(fromAddress: string, to: string, amount: string): Promise<SendParams> {
+function sendParams(fromAddress: string, to: string, amount: string): SendParams {
   return {
     from: {
-      adapter: await getAdapter(),
+      adapter: getAdapter(),
       chain: config.chain,
       address: fromAddress,
     },
@@ -59,8 +62,7 @@ async function sendParams(fromAddress: string, to: string, amount: string): Prom
 }
 
 export async function estimateUsdcSend(fromAddress: string, to: string, amount: string) {
-  const appKit = await getKit();
-  return appKit.estimateSend(await sendParams(fromAddress, to, amount));
+  return getKit().estimateSend(sendParams(fromAddress, to, amount));
 }
 
 export async function sendUsdc(input: {
@@ -77,8 +79,7 @@ export async function sendUsdc(input: {
   }
 
   const estimate = await estimateUsdcSend(input.wallet.address, input.to, input.amount);
-  const appKit = await getKit();
-  const result = await appKit.send(await sendParams(input.wallet.address, input.to, input.amount));
+  const result = await getKit().send(sendParams(input.wallet.address, input.to, input.amount));
 
   const state = "state" in result ? String(result.state) : "submitted";
   const txHash = "txHash" in result && typeof result.txHash === "string" ? result.txHash : undefined;
