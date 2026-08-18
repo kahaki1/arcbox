@@ -8,7 +8,7 @@ async function ensureWalletSetId(): Promise<string> {
   const existing = store.getWalletSetId();
   if (existing) return existing;
 
-  const client = getCircleClient();
+  const client = await getCircleClient();
   const response = await client.createWalletSet({
     name: "ArcBox ChatGPT users",
     idempotencyKey: randomUUID(),
@@ -25,7 +25,7 @@ export async function ensureUserWallet(userId: string): Promise<WalletRecord> {
   const existing = store.getWalletByUserId(userId);
   if (existing) return existing;
 
-  const client = getCircleClient();
+  const client = await getCircleClient();
   const walletSetId = await ensureWalletSetId();
   const response = await client.createWallets({
     walletSetId,
@@ -58,7 +58,7 @@ export type TokenBalance = {
 };
 
 export async function getWalletBalances(walletId: string): Promise<TokenBalance[]> {
-  const client = getCircleClient();
+  const client = await getCircleClient();
   const response = await client.getWalletTokenBalance({ id: walletId });
   return (response.data?.tokenBalances ?? []).map((row) => ({
     symbol: row.token?.symbol ?? "UNKNOWN",
