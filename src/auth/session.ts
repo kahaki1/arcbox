@@ -4,7 +4,7 @@ import { config, isHttps } from "../config.js";
 import { store } from "../store.js";
 import { readSession, signSession } from "./crypto.js";
 
-const COOKIE = "arcbox_session";
+const COOKIE = "onix_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
 
 function cookieOptions(): CookieOptions {
@@ -46,7 +46,7 @@ export function clearSession(req: Request, res: Response): void {
   res.clearCookie(COOKIE, { path: "/" });
 }
 
-export const pendingCookie = "arcbox_oauth_pending";
+export const pendingCookie = "onix_oauth_pending";
 
 export function setPendingAuthCookie(res: Response, pendingId: string): void {
   res.cookie(pendingCookie, pendingId, {

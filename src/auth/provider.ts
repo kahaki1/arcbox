@@ -91,7 +91,7 @@ async function fetchCimdClient(clientId: string): Promise<OAuthClientInformation
   return client;
 }
 
-export class ArcBoxClientsStore implements OAuthRegisteredClientsStore {
+export class OnixClientsStore implements OAuthRegisteredClientsStore {
   async getClient(clientId: string): Promise<OAuthClientInformationFull | undefined> {
     const local = await store.getClient(clientId);
     if (local) return asFullClient(local);
@@ -119,8 +119,8 @@ export class ArcBoxClientsStore implements OAuthRegisteredClientsStore {
   }
 }
 
-export class ArcBoxAuthProvider implements OAuthServerProvider {
-  clientsStore = new ArcBoxClientsStore();
+export class OnixAuthProvider implements OAuthServerProvider {
+  clientsStore = new OnixClientsStore();
 
   async authorize(
     client: OAuthClientInformationFull,
@@ -312,4 +312,4 @@ export class ArcBoxAuthProvider implements OAuthServerProvider {
   }
 }
 
-export const authProvider = new ArcBoxAuthProvider();
+export const authProvider = new OnixAuthProvider();

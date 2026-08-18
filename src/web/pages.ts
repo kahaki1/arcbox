@@ -101,11 +101,11 @@ function layout(title: string, body: string): string {
 
 export function landingPage(): string {
   return layout(
-    "ArcBox — send USDC from ChatGPT on Arc Testnet",
+    "Onix — send USDC from ChatGPT on Arc Testnet",
     `
     <div class="wrap">
       <header>
-        <div class="brand"><span class="mark"></span>ArcBox</div>
+        <div class="brand"><span class="mark"></span>Onix</div>
         <div class="nav">
           <a href="/login">Sign in</a>
         </div>
@@ -114,7 +114,7 @@ export function landingPage(): string {
         <div class="eyebrow">ChatGPT MCP · Arc Testnet · Circle wallets</div>
         <h1>Connect ChatGPT<br>to a USDC wallet.</h1>
         <p class="lede">
-          Each ChatGPT user signs in with Google or an email code. ArcBox maps that email to a Circle
+          Each ChatGPT user signs in with Google or an email code. Onix maps that email to a Circle
           developer-controlled wallet on Arc Testnet, then ChatGPT can send USDC through App Kit.
         </p>
         <div class="cta">
@@ -129,7 +129,7 @@ export function landingPage(): string {
       <section class="steps">
         <div class="card"><div class="n">01</div><h3>Copy the MCP URL</h3><p>Use the URL above. ChatGPT must reach this host over HTTPS.</p></div>
         <div class="card"><div class="n">02</div><h3>Enable Developer mode</h3><p>On ChatGPT web: Settings → Apps &amp; connectors / Security → turn on Developer mode.</p></div>
-        <div class="card"><div class="n">03</div><h3>Add a plugin</h3><p>Browse plugins → + → New Plugin. Name it ArcBox. Server URL = the MCP URL. Authentication: <strong>OAuth</strong>.</p></div>
+        <div class="card"><div class="n">03</div><h3>Add a plugin</h3><p>Browse plugins → + → New Plugin. Name it Onix. Server URL = the MCP URL. Authentication: <strong>OAuth</strong>.</p></div>
         <div class="card"><div class="n">04</div><h3>Authorize</h3><p>Connect the plugin, then sign in with Google or an email code. We mint a Circle wallet and store it against that email in Firebase.</p></div>
       </section>
     </div>
@@ -144,10 +144,10 @@ export function authPage(input: {
   error?: string;
 }): string {
   return layout(
-    "Sign in to ArcBox",
+    "Sign in to Onix",
     `
     <div class="panel">
-      <div class="brand" style="margin-bottom:18px"><span class="mark"></span>ArcBox</div>
+      <div class="brand" style="margin-bottom:18px"><span class="mark"></span>Onix</div>
       <h1 style="font-size:36px">Sign in</h1>
       <p class="muted">Continue with Google, or we will email you a 6-digit code. Same email always maps to the same Arc Testnet wallet.</p>
       ${
@@ -259,11 +259,11 @@ export function dashboardPage(input: {
   walletError?: string;
 }): string {
   return layout(
-    "ArcBox dashboard",
+    "Onix dashboard",
     `
     <div class="wrap">
       <header>
-        <div class="brand"><span class="mark"></span>ArcBox</div>
+        <div class="brand"><span class="mark"></span>Onix</div>
         <div class="nav"><span class="muted">${escapeHtml(input.email)}</span><a href="/logout">Log out</a></div>
       </header>
       <section class="hero" style="padding-top:36px">

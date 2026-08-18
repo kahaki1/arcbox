@@ -31,18 +31,18 @@ function userIdFromExtra(extra: Record<string, unknown> | undefined): string | n
 
 export function createMcpServer(authExtra?: Record<string, unknown>): McpServer {
   const server = new McpServer({
-    name: "arcbox-mcp-server",
+    name: "onix-mcp-server",
     version: "1.0.0",
   });
 
   const oauthScheme = { type: "oauth2" as const, scopes: ["wallet"] };
 
   server.registerTool(
-    "arcbox_status",
+    "onix_status",
     {
-      title: "ArcBox status",
+      title: "Onix status",
       description:
-        "Show whether this ChatGPT user is signed into ArcBox and whether Circle wallets are configured. Safe to call first.",
+        "Show whether this ChatGPT user is signed into Onix and whether Circle wallets are configured. Safe to call first.",
       inputSchema: z.object({}).strict(),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       // @ts-expect-error ChatGPT Apps SDK reads securitySchemes
@@ -53,7 +53,7 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
       const user = userId ? await store.getUserById(userId) : undefined;
       const wallet = userId ? await store.getWalletByUserId(userId) : undefined;
       return textResult({
-        product: "ArcBox",
+        product: "Onix",
         network: config.circleBlockchain,
         authenticated: Boolean(user),
         email: user?.email ?? null,
@@ -78,7 +78,7 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
     },
     async () => {
       const userId = userIdFromExtra(authExtra);
-      if (!userId) return authChallenge("Log into ArcBox to load your wallet.");
+      if (!userId) return authChallenge("Log into Onix to load your wallet.");
       try {
         const user = await store.getUserById(userId);
         const wallet = await ensureUserWallet(userId, user?.email);
@@ -112,7 +112,7 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
     },
     async () => {
       const userId = userIdFromExtra(authExtra);
-      if (!userId) return authChallenge("Log into ArcBox to read your balance.");
+      if (!userId) return authChallenge("Log into Onix to read your balance.");
       try {
         const user = await store.getUserById(userId);
         const wallet = await ensureUserWallet(userId, user?.email);
@@ -150,7 +150,7 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
     },
     async ({ to, amount }) => {
       const userId = userIdFromExtra(authExtra);
-      if (!userId) return authChallenge("Log into ArcBox to estimate a send.");
+      if (!userId) return authChallenge("Log into Onix to estimate a send.");
       const invalid = validateSendInput(to, amount);
       if (invalid) return textResult({ error: invalid }, true);
       try {
@@ -197,7 +197,7 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
     },
     async ({ to, amount, confirm }) => {
       const userId = userIdFromExtra(authExtra);
-      if (!userId) return authChallenge("Log into ArcBox to send USDC.");
+      if (!userId) return authChallenge("Log into Onix to send USDC.");
       const invalid = validateSendInput(to, amount);
       if (invalid) return textResult({ error: invalid }, true);
       try {
@@ -245,7 +245,7 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
     "list_transfers",
     {
       title: "List recent USDC sends",
-      description: "List recent USDC transfers ArcBox submitted for the authenticated user.",
+      description: "List recent USDC transfers Onix submitted for the authenticated user.",
       inputSchema: z
         .object({
           limit: z.number().int().min(1).max(50).default(10),
@@ -257,7 +257,7 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
     },
     async ({ limit }) => {
       const userId = userIdFromExtra(authExtra);
-      if (!userId) return authChallenge("Log into ArcBox to list transfers.");
+      if (!userId) return authChallenge("Log into Onix to list transfers.");
       return textResult({ transfers: await store.listTransfers(userId, limit) });
     },
   );

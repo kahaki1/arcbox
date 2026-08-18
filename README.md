@@ -1,12 +1,12 @@
-# ArcBox
+# Onix
 
 A PayBox-style remote MCP server for ChatGPT: each ChatGPT user signs in with OAuth, gets a **Circle developer-controlled wallet** on **Arc Testnet**, and can send **USDC** through [Circle App Kit](https://docs.arc.io/app-kit/send).
 
 ## What it does
 
 1. ChatGPT connects to `https://<your-host>/mcp` with **OAuth** (not “No Auth”).
-2. The user creates an ArcBox account or logs in.
-3. ArcBox creates one Circle wallet on `ARC-TESTNET` for that user (or reuses the existing one).
+2. The user signs in with Google or an email code.
+3. Onix creates one Circle wallet on `ARC-TESTNET` for that user (or reuses the existing one).
 4. ChatGPT can then call:
    - `get_wallet` — address, explorer, faucet
    - `get_balance` — USDC on Arc Testnet
@@ -50,10 +50,10 @@ Open `PUBLIC_URL` in a browser and create an account. Confirm a wallet address a
 1. Copy `https://<your-host>/mcp`
 2. On **ChatGPT web**, open Settings and turn on **Developer mode**
 3. Plugins → Browse plugins → **+** → **New Plugin**
-4. Name: `ArcBox`
+4. Name: `Onix`
 5. Server URL: the `/mcp` URL
 6. Authentication: **OAuth** — do not leave No Auth selected
-7. Save, connect, and complete the ArcBox login
+7. Save, connect, and complete the Onix login
 
 Then in chat:
 
@@ -69,7 +69,7 @@ Then in chat:
 - Dynamic client registration **and** Client ID Metadata Documents
 - Refresh tokens (required by ChatGPT)
 - `resource` / audience bound to `/mcp`
-- One Circle EOA per ArcBox user, inside one shared wallet set
+- One Circle EOA per Onix user, inside one shared wallet set
 
 This is **developer-controlled custody**: Circle holds the keys, your server signs with the entity secret. Do not treat this as a non-custodial PayBox clone.
 
@@ -80,7 +80,7 @@ Sign-in is Google or email + 6-digit code. Firebase Auth holds the user; Firesto
 1. Create a Firebase project and enable **Authentication → Google**.
 2. Create a Firestore database (production mode is fine — the Admin SDK bypasses rules).
 3. Deploy `firestore.rules` (clients have no direct access).
-4. Add `arcbox-pink.vercel.app` and `localhost` under Authentication → Settings → Authorized domains.
+4. Add `onixmcp.vercel.app` and `localhost` under Authentication → Settings → Authorized domains.
 5. Project settings → service account → generate a private key.
 6. Project settings → Your apps → Web app: copy apiKey, authDomain, appId.
 
@@ -93,7 +93,7 @@ For email codes, set `RESEND_API_KEY` (or install the Firebase **Trigger Email**
 3. Set these environment variables in the Vercel project:
 
 ```env
-PUBLIC_URL=https://your-project.vercel.app
+PUBLIC_URL=https://onixmcp.vercel.app
 COOKIE_SECRET=
 CIRCLE_API_KEY=
 CIRCLE_ENTITY_SECRET=

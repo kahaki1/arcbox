@@ -6,19 +6,19 @@ export function emailSenderConfigured(): boolean {
 }
 
 export async function sendLoginCode(email: string, code: string): Promise<void> {
-  const from = process.env.EMAIL_FROM ?? "ArcBox <onboarding@resend.dev>";
-  const subject = "Your ArcBox login code";
+  const from = process.env.EMAIL_FROM ?? "Onix <onboarding@resend.dev>";
+  const subject = "Your Onix login code";
   const html = `
     <div style="font-family:Segoe UI,Arial,sans-serif;background:#07080a;color:#ece8df;padding:32px">
       <div style="max-width:440px;margin:0 auto;background:#12151b;border-radius:18px;padding:28px">
-        <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#5dffb2;font-weight:700">ArcBox</div>
+        <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#5dffb2;font-weight:700">Onix</div>
         <h1 style="font-size:28px;letter-spacing:-.04em;margin:12px 0 8px">Your login code</h1>
         <p style="color:#8f8a82;margin:0 0 20px">Use this code to sign in. It expires in 10 minutes.</p>
         <div style="font-size:36px;letter-spacing:.2em;font-weight:700;color:#5dffb2">${code}</div>
       </div>
     </div>
   `;
-  const text = `Your ArcBox login code is ${code}. It expires in 10 minutes.`;
+  const text = `Your Onix login code is ${code}. It expires in 10 minutes.`;
 
   if (firebaseConfigured()) {
     await adminDb().collection("mail").add({

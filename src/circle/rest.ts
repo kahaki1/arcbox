@@ -101,7 +101,7 @@ export async function createArcWallet(walletSetId: string, userId: string): Prom
       blockchains: [config.circleBlockchain],
       accountType: "EOA",
       count: 1,
-      metadata: [{ name: `arcbox:${userId}` }],
+      metadata: [{ name: `onix:${userId}` }],
     }),
   });
   const wallet = body.data?.wallets?.[0];

@@ -53,7 +53,7 @@ const protectedResource = {
   resource: mcpUrl.href,
   authorization_servers: [issuerUrl.href],
   scopes_supported: [...config.scopes],
-  resource_name: "ArcBox",
+  resource_name: "Onix",
   resource_documentation: publicUrl.href,
   bearer_methods_supported: ["header"],
 };
@@ -78,7 +78,7 @@ app.use(
     baseUrl: issuerUrl,
     resourceServerUrl: mcpUrl,
     scopesSupported: [...config.scopes],
-    resourceName: "ArcBox",
+    resourceName: "Onix",
     serviceDocumentationUrl: publicUrl,
   }),
 );

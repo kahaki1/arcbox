@@ -6,7 +6,7 @@ async function ensureWalletSetId(): Promise<string> {
   if (config.circleWalletSetId) return config.circleWalletSetId;
   const existing = await store.getWalletSetId();
   if (existing) return existing;
-  const id = await createWalletSet("ArcBox ChatGPT users");
+  const id = await createWalletSet("Onix ChatGPT users");
   await store.setWalletSetId(id);
   return id;
 }
