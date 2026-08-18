@@ -1,0 +1,36 @@
+{
+  "name": "arcbox-mcp-server",
+  "version": "1.0.0",
+  "description": "ChatGPT MCP that assigns each user a Circle developer wallet on Arc Testnet and sends USDC via App Kit.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@circle-fin/adapter-circle-wallets": "^1.0.0",
+    "@circle-fin/app-kit": "^1.0.0",
+    "@circle-fin/developer-controlled-wallets": "^9.0.0",
+    "@modelcontextprotocol/sdk": "^1.22.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "jose": "^6.0.11",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.17.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2"
+  }
+}
