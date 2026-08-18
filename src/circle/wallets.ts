@@ -4,15 +4,15 @@ import { createArcWallet, createWalletSet, listWalletBalances } from "./rest.js"
 
 async function ensureWalletSetId(): Promise<string> {
   if (config.circleWalletSetId) return config.circleWalletSetId;
-  const existing = store.getWalletSetId();
+  const existing = await store.getWalletSetId();
   if (existing) return existing;
   const id = await createWalletSet("ArcBox ChatGPT users");
-  store.setWalletSetId(id);
+  await store.setWalletSetId(id);
   return id;
 }
 
-export async function ensureUserWallet(userId: string): Promise<WalletRecord> {
-  const existing = store.getWalletByUserId(userId);
+export async function ensureUserWallet(userId: string, email?: string): Promise<WalletRecord> {
+  const existing = await store.getWalletByUserId(userId);
   if (existing) return existing;
 
   const walletSetId = await ensureWalletSetId();
@@ -20,6 +20,7 @@ export async function ensureUserWallet(userId: string): Promise<WalletRecord> {
 
   return store.saveWallet({
     userId,
+    email,
     circleWalletId: wallet.id,
     address: wallet.address,
     blockchain: wallet.blockchain,

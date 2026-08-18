@@ -1,28 +1,32 @@
-import { randomUUID } from "node:crypto";
 import type { Express, Request, Response } from "express";
-import { config } from "../config.js";
 import { circleConfigured } from "../config.js";
 import { ensureUserWallet, getWalletBalances, usdcBalance } from "../circle/wallets.js";
+import {
+  firebaseConfigured,
+  firebaseWebConfig,
+  firebaseWebReady,
+  getOrCreateFirebaseUser,
+  verifyGoogleIdToken,
+} from "../firebase/admin.js";
 import { store } from "../store.js";
 import { authPage, dashboardPage } from "../web/pages.js";
-import { hashPassword, verifyPassword } from "./crypto.js";
+import { startEmailOtp, verifyEmailOtp } from "./otp.js";
 import { authProvider } from "./provider.js";
 import { clearSession, createSession, getUserId, takePendingAuthCookie } from "./session.js";
 
-function emailFrom(req: Request): string {
-  const value = typeof req.body?.email === "string" ? req.body.email : "";
-  return value.trim().toLowerCase();
-}
-
-function passwordFrom(req: Request): string {
-  return typeof req.body?.password === "string" ? req.body.password : "";
-}
-
-async function finishLogin(req: Request, res: Response, userId: string): Promise<void> {
+async function finishLogin(req: Request, res: Response, userId: string, email: string, provider: string): Promise<string> {
+  const existing = await store.getUserById(userId);
+  await store.upsertUser({
+    id: userId,
+    email,
+    provider,
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
+  });
   await createSession(res, userId);
+
   if (circleConfigured()) {
     try {
-      await ensureUserWallet(userId);
+      await ensureUserWallet(userId, email);
     } catch (error) {
       console.error("Wallet provision failed:", error);
     }
@@ -30,77 +34,69 @@ async function finishLogin(req: Request, res: Response, userId: string): Promise
 
   const pendingId = takePendingAuthCookie(req, res);
   if (pendingId) {
-    const pending = store.takePendingAuth(pendingId);
+    const pending = await store.takePendingAuth(pendingId);
     const client = pending ? await authProvider.clientsStore.getClient(pending.clientId) : undefined;
     if (pending && client) {
-      authProvider.completeAuthorization(
-        userId,
-        client,
-        {
-          state: pending.state,
-          scopes: pending.scopes,
-          codeChallenge: pending.codeChallenge,
-          redirectUri: pending.redirectUri,
-          resource: pending.resource ? new URL(pending.resource) : undefined,
-        },
-        res,
-      );
-      return;
+      return authProvider.completeAuthorization(userId, client, {
+        state: pending.state,
+        scopes: pending.scopes,
+        codeChallenge: pending.codeChallenge,
+        redirectUri: pending.redirectUri,
+        resource: pending.resource ? new URL(pending.resource) : undefined,
+      });
     }
   }
 
-  res.redirect("/dashboard");
+  return "/dashboard";
 }
 
 export function mountAuthPages(app: Express): void {
-  app.get("/login", async (req, res) => {
+  app.get(["/login", "/signup"], async (req, res) => {
     if (await getUserId(req)) {
       res.redirect("/dashboard");
       return;
     }
-    res.type("html").send(authPage({ mode: "login" }));
+    res.type("html").send(
+      authPage({
+        firebaseWeb: firebaseWebConfig(),
+        firebaseReady: firebaseConfigured(),
+        googleReady: firebaseWebReady(),
+      }),
+    );
   });
 
-  app.post("/login", async (req, res) => {
-    const email = emailFrom(req);
-    const password = passwordFrom(req);
-    const user = store.getUserByEmail(email);
-    if (!user || !(await verifyPassword(password, user.passwordHash))) {
-      res.status(401).type("html").send(authPage({ mode: "login", email, error: "Invalid email or password." }));
-      return;
+  app.post("/auth/google", async (req, res) => {
+    try {
+      const idToken = typeof req.body?.idToken === "string" ? req.body.idToken : "";
+      const google = await verifyGoogleIdToken(idToken);
+      const redirect = await finishLogin(req, res, google.uid, google.email, "google");
+      res.json({ ok: true, redirect });
+    } catch (error) {
+      res.status(401).json({ error: error instanceof Error ? error.message : "Google sign-in failed" });
     }
-    await finishLogin(req, res, user.id);
   });
 
-  app.get("/signup", async (req, res) => {
-    if (await getUserId(req)) {
-      res.redirect("/dashboard");
-      return;
+  app.post("/auth/email/start", async (req, res) => {
+    try {
+      const email = typeof req.body?.email === "string" ? req.body.email : "";
+      const result = await startEmailOtp(email);
+      res.json({ ok: true, ...result });
+    } catch (error) {
+      res.status(400).json({ error: error instanceof Error ? error.message : "Could not send code" });
     }
-    res.type("html").send(authPage({ mode: "signup" }));
   });
 
-  app.post("/signup", async (req, res) => {
-    const email = emailFrom(req);
-    const password = passwordFrom(req);
-    if (!email.includes("@") || password.length < 8) {
-      res
-        .status(400)
-        .type("html")
-        .send(authPage({ mode: "signup", email, error: "Use a valid email and a password of at least 8 characters." }));
-      return;
+  app.post("/auth/email/verify", async (req, res) => {
+    try {
+      const email = typeof req.body?.email === "string" ? req.body.email : "";
+      const code = typeof req.body?.code === "string" ? req.body.code : "";
+      const verifiedEmail = await verifyEmailOtp(email, code);
+      const user = await getOrCreateFirebaseUser(verifiedEmail);
+      const redirect = await finishLogin(req, res, user.uid, user.email, "email");
+      res.json({ ok: true, redirect });
+    } catch (error) {
+      res.status(401).json({ error: error instanceof Error ? error.message : "Could not verify code" });
     }
-    if (store.getUserByEmail(email)) {
-      res.status(409).type("html").send(authPage({ mode: "signup", email, error: "That email is already registered." }));
-      return;
-    }
-    const user = store.createUser({
-      id: randomUUID(),
-      email,
-      passwordHash: await hashPassword(password),
-      createdAt: new Date().toISOString(),
-    });
-    await finishLogin(req, res, user.id);
   });
 
   app.get("/logout", (req, res) => {
@@ -114,7 +110,7 @@ export function mountAuthPages(app: Express): void {
       res.redirect("/login");
       return;
     }
-    const user = store.getUserById(userId);
+    const user = await store.getUserById(userId);
     if (!user) {
       clearSession(req, res);
       res.redirect("/login");
@@ -126,7 +122,7 @@ export function mountAuthPages(app: Express): void {
     let walletError: string | undefined;
     try {
       if (circleConfigured()) {
-        const wallet = await ensureUserWallet(userId);
+        const wallet = await ensureUserWallet(userId, user.email);
         address = wallet.address;
         usdc = usdcBalance(await getWalletBalances(wallet.circleWalletId));
       } else {
@@ -145,7 +141,7 @@ export function mountAuthPages(app: Express): void {
     try {
       const auth = await authProvider.verifyAccessToken(token);
       const userId = typeof auth.extra?.userId === "string" ? auth.extra.userId : "";
-      const user = store.getUserById(userId);
+      const user = await store.getUserById(userId);
       if (!user) {
         res.status(401).json({ error: "invalid_token" });
         return;
@@ -160,5 +156,3 @@ export function mountAuthPages(app: Express): void {
     }
   });
 }
-
-void config;

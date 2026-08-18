@@ -50,8 +50,8 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
     },
     async () => {
       const userId = userIdFromExtra(authExtra);
-      const user = userId ? store.getUserById(userId) : undefined;
-      const wallet = userId ? store.getWalletByUserId(userId) : undefined;
+      const user = userId ? await store.getUserById(userId) : undefined;
+      const wallet = userId ? await store.getWalletByUserId(userId) : undefined;
       return textResult({
         product: "ArcBox",
         network: config.circleBlockchain,
@@ -80,7 +80,8 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
       const userId = userIdFromExtra(authExtra);
       if (!userId) return authChallenge("Log into ArcBox to load your wallet.");
       try {
-        const wallet = await ensureUserWallet(userId);
+        const user = await store.getUserById(userId);
+        const wallet = await ensureUserWallet(userId, user?.email);
         return textResult({
           address: wallet.address,
           walletId: wallet.circleWalletId,
@@ -113,7 +114,8 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
       const userId = userIdFromExtra(authExtra);
       if (!userId) return authChallenge("Log into ArcBox to read your balance.");
       try {
-        const wallet = await ensureUserWallet(userId);
+        const user = await store.getUserById(userId);
+        const wallet = await ensureUserWallet(userId, user?.email);
         const balances = await getWalletBalances(wallet.circleWalletId);
         return textResult({
           address: wallet.address,
@@ -152,7 +154,8 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
       const invalid = validateSendInput(to, amount);
       if (invalid) return textResult({ error: invalid }, true);
       try {
-        const wallet = await ensureUserWallet(userId);
+        const user = await store.getUserById(userId);
+        const wallet = await ensureUserWallet(userId, user?.email);
         const estimate = await estimateUsdcSend(wallet.address, to, amount);
         return textResult({
           from: wallet.address,
@@ -198,7 +201,8 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
       const invalid = validateSendInput(to, amount);
       if (invalid) return textResult({ error: invalid }, true);
       try {
-        const wallet = await ensureUserWallet(userId);
+        const user = await store.getUserById(userId);
+        const wallet = await ensureUserWallet(userId, user?.email);
         if (!confirm) {
           const estimate = await estimateUsdcSend(wallet.address, to, amount);
           return textResult({
@@ -209,7 +213,7 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
             token: "USDC",
             chain: config.chain,
             dailyLimitUsdc: config.sendDailyLimitUsdc,
-            sentTodayUsdc: store.sumSentToday(userId),
+            sentTodayUsdc: await store.sumSentToday(userId),
             estimate,
             message: "Preview only. Call send_usdc again with confirm=true after the user agrees.",
           });
@@ -254,7 +258,7 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
     async ({ limit }) => {
       const userId = userIdFromExtra(authExtra);
       if (!userId) return authChallenge("Log into ArcBox to list transfers.");
-      return textResult({ transfers: store.listTransfers(userId, limit) });
+      return textResult({ transfers: await store.listTransfers(userId, limit) });
     },
   );
 

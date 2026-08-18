@@ -22,13 +22,13 @@ export async function getUserId(req: Request): Promise<string | null> {
   if (!raw || typeof raw !== "string") return null;
   const parsed = await readSession(raw);
   if (!parsed) return null;
-  const session = store.getSession(parsed.sid);
+  const session = await store.getSession(parsed.sid);
   return session?.userId ?? null;
 }
 
 export async function createSession(res: Response, userId: string): Promise<void> {
   const id = randomUUID();
-  store.saveSession({
+  await store.saveSession({
     id,
     userId,
     expiresAt: Date.now() + SESSION_MS,
@@ -40,7 +40,7 @@ export function clearSession(req: Request, res: Response): void {
   const raw = req.cookies?.[COOKIE];
   if (raw) {
     void readSession(raw).then((parsed) => {
-      if (parsed) store.deleteSession(parsed.sid);
+      if (parsed) void store.deleteSession(parsed.sid);
     });
   }
   res.clearCookie(COOKIE, { path: "/" });

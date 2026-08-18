@@ -7,6 +7,7 @@ import { mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
 import { mountAuthPages } from "./auth/routes.js";
 import { authProvider } from "./auth/provider.js";
 import { getUserId } from "./auth/session.js";
+import { firebaseConfigured } from "./firebase/admin.js";
 import { circleConfigured, config, issuerUrl, mcpUrl, publicUrl } from "./config.js";
 import { createMcpServer } from "./mcp/server.js";
 import { landingPage } from "./web/pages.js";
@@ -91,6 +92,7 @@ app.get("/health", (_req, res) => {
     ok: true,
     mcp: mcpUrl.href,
     circleConfigured: circleConfigured(),
+    firebaseConfigured: firebaseConfigured(),
   });
 });
 

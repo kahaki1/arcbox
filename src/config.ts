@@ -23,6 +23,7 @@ export const config = {
   explorerBase: "https://testnet.arcscan.app",
   faucetUrl: "https://faucet.circle.com",
   scopes: ["openid", "email", "wallet", "wallet:send"] as const,
+  resendApiKey: process.env.RESEND_API_KEY?.trim() ?? "",
 };
 
 export const publicUrl = new URL(config.publicUrl);

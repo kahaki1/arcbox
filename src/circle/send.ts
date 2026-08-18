@@ -71,7 +71,7 @@ export async function sendUsdc(input: {
   to: string;
   amount: string;
 }) {
-  const spent = store.sumSentToday(input.userId);
+  const spent = await store.sumSentToday(input.userId);
   if (spent + Number(input.amount) > config.sendDailyLimitUsdc) {
     throw new Error(
       `This send would exceed the daily cap of ${config.sendDailyLimitUsdc} USDC (already sent ${spent} today).`,
@@ -90,7 +90,7 @@ export async function sendUsdc(input: {
         ? `${config.explorerBase}/tx/${txHash}`
         : undefined;
 
-  store.addTransfer({
+  await store.addTransfer({
     id: randomUUID(),
     userId: input.userId,
     fromAddress: input.wallet.address,

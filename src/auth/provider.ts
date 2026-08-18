@@ -78,7 +78,7 @@ async function fetchCimdClient(clientId: string): Promise<OAuthClientInformation
     scope: body.scope,
   };
   cimdCache.set(clientId, { client, fetchedAt: Date.now() });
-  store.saveClient({
+  await store.saveClient({
     client_id: client.client_id,
     redirect_uris: client.redirect_uris,
     client_name: client.client_name,
@@ -93,7 +93,7 @@ async function fetchCimdClient(clientId: string): Promise<OAuthClientInformation
 
 export class ArcBoxClientsStore implements OAuthRegisteredClientsStore {
   async getClient(clientId: string): Promise<OAuthClientInformationFull | undefined> {
-    const local = store.getClient(clientId);
+    const local = await store.getClient(clientId);
     if (local) return asFullClient(local);
     try {
       return await fetchCimdClient(clientId);
@@ -103,7 +103,7 @@ export class ArcBoxClientsStore implements OAuthRegisteredClientsStore {
   }
 
   async registerClient(client: OAuthClientInformationFull): Promise<OAuthClientInformationFull> {
-    const saved = store.saveClient({
+    const saved = await store.saveClient({
       client_id: client.client_id,
       client_secret: client.client_secret,
       client_id_issued_at: client.client_id_issued_at,
@@ -135,7 +135,7 @@ export class ArcBoxAuthProvider implements OAuthServerProvider {
     const userId = res.locals.userId as string | undefined;
     if (!userId) {
       const pendingId = randomUUID();
-      store.savePendingAuth({
+      await store.savePendingAuth({
         id: pendingId,
         clientId: client.client_id,
         state: params.state,
@@ -150,22 +150,20 @@ export class ArcBoxAuthProvider implements OAuthServerProvider {
       return;
     }
 
-    this.completeAuthorization(userId, client, params, res);
+    res.redirect(await this.completeAuthorization(userId, client, params));
   }
 
-  completeAuthorization(
+  async completeAuthorization(
     userId: string,
     client: OAuthClientInformationFull,
     params: AuthorizationParams,
-    res: Response,
-  ): void {
+  ): Promise<string> {
     if (!client.redirect_uris.includes(params.redirectUri)) {
-      res.status(400).send("Unregistered redirect_uri");
-      return;
+      throw new Error("Unregistered redirect_uri");
     }
 
     const code = randomToken();
-    store.saveAuthCode({
+    await store.saveAuthCode({
       code,
       clientId: client.client_id,
       userId,
@@ -180,14 +178,14 @@ export class ArcBoxAuthProvider implements OAuthServerProvider {
     target.searchParams.set("code", code);
     if (params.state) target.searchParams.set("state", params.state);
     target.searchParams.set("iss", issuerUrl.href);
-    res.redirect(target.toString());
+    return target.toString();
   }
 
   async challengeForAuthorizationCode(
     client: OAuthClientInformationFull,
     authorizationCode: string,
   ): Promise<string> {
-    const row = store.peekAuthCode(authorizationCode);
+    const row = await store.peekAuthCode(authorizationCode);
     if (!row || row.clientId !== client.client_id) {
       throw new Error("Invalid authorization code");
     }
@@ -201,7 +199,7 @@ export class ArcBoxAuthProvider implements OAuthServerProvider {
     redirectUri?: string,
     resource?: URL,
   ): Promise<OAuthTokens> {
-    const row = store.takeAuthCode(authorizationCode);
+    const row = await store.takeAuthCode(authorizationCode);
     if (!row || row.clientId !== client.client_id) {
       throw new Error("Invalid authorization code");
     }
@@ -220,7 +218,7 @@ export class ArcBoxAuthProvider implements OAuthServerProvider {
     scopes?: string[],
     resource?: URL,
   ): Promise<OAuthTokens> {
-    const row = store.getToken(refreshToken);
+    const row = await store.getToken(refreshToken);
     if (!row || row.type !== "refresh" || row.clientId !== client.client_id) {
       throw new Error("Invalid refresh token");
     }
@@ -228,7 +226,7 @@ export class ArcBoxAuthProvider implements OAuthServerProvider {
     if (!nextScopes.every((scope) => row.scopes.includes(scope))) {
       throw new Error("Requested scopes exceed original grant");
     }
-    store.deleteTokenFamily(row.familyId);
+    await store.deleteTokenFamily(row.familyId);
     return this.issueTokens(
       client,
       row.userId,
@@ -239,7 +237,7 @@ export class ArcBoxAuthProvider implements OAuthServerProvider {
   }
 
   async verifyAccessToken(token: string): Promise<AuthInfo> {
-    const row = store.getToken(token);
+    const row = await store.getToken(token);
     if (!row || row.type !== "access") {
       throw new Error("Invalid or expired token");
     }
@@ -257,9 +255,9 @@ export class ArcBoxAuthProvider implements OAuthServerProvider {
     _client: OAuthClientInformationFull,
     request: OAuthTokenRevocationRequest,
   ): Promise<void> {
-    const row = store.getToken(request.token);
+    const row = await store.getToken(request.token);
     if (!row) return;
-    store.deleteTokenFamily(row.familyId);
+    await store.deleteTokenFamily(row.familyId);
   }
 
   private async issueTokens(
@@ -271,7 +269,7 @@ export class ArcBoxAuthProvider implements OAuthServerProvider {
   ): Promise<OAuthTokens> {
     const access = randomToken();
     const refresh = randomToken();
-    store.saveToken({
+    await store.saveToken({
       token: access,
       type: "access",
       userId,
@@ -281,7 +279,7 @@ export class ArcBoxAuthProvider implements OAuthServerProvider {
       expiresAt: Date.now() + ACCESS_TTL_SEC * 1000,
       familyId,
     });
-    store.saveToken({
+    await store.saveToken({
       token: refresh,
       type: "refresh",
       userId,
@@ -292,7 +290,7 @@ export class ArcBoxAuthProvider implements OAuthServerProvider {
       familyId,
     });
 
-    const user = store.getUserById(userId);
+    const user = await store.getUserById(userId);
     const tokens: OAuthTokens = {
       access_token: access,
       token_type: "bearer",

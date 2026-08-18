@@ -73,6 +73,19 @@ Then in chat:
 
 This is **developer-controlled custody**: Circle holds the keys, your server signs with the entity secret. Do not treat this as a non-custodial PayBox clone.
 
+## Firebase auth
+
+Sign-in is Google or email + 6-digit code. Firebase Auth holds the user; Firestore maps `email` / `uid` to the Circle wallet.
+
+1. Create a Firebase project and enable **Authentication → Google**.
+2. Create a Firestore database (production mode is fine — the Admin SDK bypasses rules).
+3. Deploy `firestore.rules` (clients have no direct access).
+4. Add `arcbox-pink.vercel.app` and `localhost` under Authentication → Settings → Authorized domains.
+5. Project settings → service account → generate a private key.
+6. Project settings → Your apps → Web app: copy apiKey, authDomain, appId.
+
+For email codes, set `RESEND_API_KEY` (or install the Firebase **Trigger Email** extension, which reads the `mail` collection).
+
 ## Deploy on Vercel
 
 1. Push this repo to GitHub.
@@ -85,13 +98,21 @@ COOKIE_SECRET=
 CIRCLE_API_KEY=
 CIRCLE_ENTITY_SECRET=
 MCP_DANGEROUSLY_ALLOW_INSECURE_ISSUER_URL=false
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+FIREBASE_WEB_API_KEY=
+FIREBASE_AUTH_DOMAIN=
+FIREBASE_APP_ID=
+RESEND_API_KEY=
+EMAIL_FROM=
 ```
 
 `PUBLIC_URL` must be the live `https://` origin (no trailing slash). After the first deploy, copy the Vercel URL into `PUBLIC_URL` and redeploy if needed.
 
 4. ChatGPT plugin URL: `https://your-project.vercel.app/mcp`
 
-Vercel functions are stateless. The local JSON user/wallet store lives in `/tmp` there, so accounts do not survive cold starts. Fine for a smoke test; for real use add a database next.
+User accounts and email→wallet maps live in Firestore once Firebase is configured.
 
 ## Local-only note
 
