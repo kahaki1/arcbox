@@ -14,6 +14,17 @@ import { startEmailOtp, verifyEmailOtp } from "./otp.js";
 import { authProvider } from "./provider.js";
 import { clearSession, createSession, getUserId, takePendingAuthCookie } from "./session.js";
 
+function publicAuthError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("NOT_FOUND") || /\b5 NOT_FOUND\b/.test(message)) {
+    return "Firestore has no database yet. In Firebase Console open project onix-mcp → Build → Firestore Database → Create database, wait a minute, then try again.";
+  }
+  if (message.includes("Cloud Firestore API has not been used") || message.includes("PERMISSION_DENIED")) {
+    return "Enable Firestore for project onix-mcp, create the database, then try again.";
+  }
+  return message;
+}
+
 async function finishLogin(req: Request, res: Response, userId: string, email: string, provider: string): Promise<string> {
   const existing = await store.getUserById(userId);
   await store.upsertUser({
@@ -72,7 +83,7 @@ export function mountAuthPages(app: Express): void {
       const redirect = await finishLogin(req, res, google.uid, google.email, "google");
       res.json({ ok: true, redirect });
     } catch (error) {
-      res.status(401).json({ error: error instanceof Error ? error.message : "Google sign-in failed" });
+      res.status(401).json({ error: publicAuthError(error) });
     }
   });
 
@@ -82,7 +93,7 @@ export function mountAuthPages(app: Express): void {
       const result = await startEmailOtp(email);
       res.json({ ok: true, ...result });
     } catch (error) {
-      res.status(400).json({ error: error instanceof Error ? error.message : "Could not send code" });
+      res.status(400).json({ error: publicAuthError(error) });
     }
   });
 
@@ -95,7 +106,7 @@ export function mountAuthPages(app: Express): void {
       const redirect = await finishLogin(req, res, user.uid, user.email, "email");
       res.json({ ok: true, redirect });
     } catch (error) {
-      res.status(401).json({ error: error instanceof Error ? error.message : "Could not verify code" });
+      res.status(401).json({ error: publicAuthError(error) });
     }
   });
 
