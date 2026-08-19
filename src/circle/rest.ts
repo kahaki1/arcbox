@@ -132,3 +132,83 @@ export async function listWalletBalances(walletId: string): Promise<
     tokenAddress: row.token?.tokenAddress,
   }));
 }
+
+export const ARC_TESTNET_USDC = "0x3600000000000000000000000000000000000000";
+
+export type CircleTransfer = {
+  id: string;
+  state: string;
+  txHash?: string;
+};
+
+export async function estimateTransfer(input: {
+  walletId: string;
+  to: string;
+  amount: string;
+  tokenAddress?: string;
+}): Promise<Record<string, unknown>> {
+  const body = await circleFetch<{ data?: Record<string, unknown> }>(
+    "/v1/w3s/transactions/transfer/estimateFee",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        walletId: input.walletId,
+        destinationAddress: input.to,
+        amounts: [input.amount],
+        tokenAddress: input.tokenAddress ?? ARC_TESTNET_USDC,
+        blockchain: config.circleBlockchain,
+      }),
+    },
+  );
+  return body.data ?? {};
+}
+
+export async function createTransfer(input: {
+  walletId: string;
+  to: string;
+  amount: string;
+  tokenAddress?: string;
+}): Promise<CircleTransfer> {
+  const body = await circleFetch<{ data?: { id?: string; state?: string } }>(
+    "/v1/w3s/developer/transactions/transfer",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        idempotencyKey: randomUUID(),
+        entitySecretCiphertext: await entitySecretCiphertext(),
+        walletId: input.walletId,
+        destinationAddress: input.to,
+        amounts: [input.amount],
+        tokenAddress: input.tokenAddress ?? ARC_TESTNET_USDC,
+        blockchain: config.circleBlockchain,
+        feeLevel: "MEDIUM",
+      }),
+    },
+  );
+  if (!body.data?.id) {
+    throw new Error("Circle did not return a transfer id.");
+  }
+  return { id: body.data.id, state: body.data.state ?? "INITIATED" };
+}
+
+export async function getTransfer(id: string): Promise<CircleTransfer> {
+  const body = await circleFetch<{
+    data?: { transaction?: { id?: string; state?: string; txHash?: string } };
+  }>(`/v1/w3s/transactions/${id}`);
+  const tx = body.data?.transaction;
+  if (!tx?.id) {
+    throw new Error("Circle did not return transaction details.");
+  }
+  return { id: tx.id, state: tx.state ?? "UNKNOWN", txHash: tx.txHash };
+}
+
+export async function waitForTransfer(id: string, timeoutMs = 45000): Promise<CircleTransfer> {
+  const terminal = new Set(["COMPLETE", "FAILED", "DENIED", "CANCELLED"]);
+  const started = Date.now();
+  let latest = await getTransfer(id);
+  while (!terminal.has(latest.state) && Date.now() - started < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    latest = await getTransfer(id);
+  }
+  return latest;
+}

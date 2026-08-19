@@ -1,39 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { circleConfigured, config } from "../config.js";
+import { config } from "../config.js";
 import { store } from "../store.js";
 import type { WalletRecord } from "../store.js";
-import { loadCjs } from "./load-cjs.js";
-
-type AppKitModule = typeof import("@circle-fin/app-kit");
-type AdapterModule = typeof import("@circle-fin/adapter-circle-wallets");
-type SendParams = import("@circle-fin/app-kit").SendParams;
-
-let kit: InstanceType<AppKitModule["AppKit"]> | null = null;
-let adapter: ReturnType<AdapterModule["createCircleWalletsAdapter"]> | null = null;
-
-function getKit() {
-  if (!kit) {
-    const { AppKit } = loadCjs<AppKitModule>("@circle-fin/app-kit");
-    kit = new AppKit();
-  }
-  return kit;
-}
-
-function getAdapter() {
-  if (!circleConfigured()) {
-    throw new Error("Circle credentials are missing.");
-  }
-  if (!adapter) {
-    const { createCircleWalletsAdapter } = loadCjs<AdapterModule>(
-      "@circle-fin/adapter-circle-wallets",
-    );
-    adapter = createCircleWalletsAdapter({
-      apiKey: config.circleApiKey,
-      entitySecret: config.circleEntitySecret,
-    });
-  }
-  return adapter;
-}
+import {
+  ARC_TESTNET_USDC,
+  createTransfer,
+  estimateTransfer,
+  listWalletBalances,
+  waitForTransfer,
+} from "./rest.js";
 
 const ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
 const AMOUNT_RE = /^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/;
@@ -48,21 +23,20 @@ export function validateSendInput(to: string, amount: string): string | null {
   return null;
 }
 
-function sendParams(fromAddress: string, to: string, amount: string): SendParams {
-  return {
-    from: {
-      adapter: getAdapter(),
-      chain: config.chain,
-      address: fromAddress,
-    },
-    to,
-    amount,
-    token: "USDC",
-  };
+async function usdcTokenAddress(walletId: string): Promise<string> {
+  const balances = await listWalletBalances(walletId);
+  const usdc = balances.find((row) => row.symbol.toUpperCase() === "USDC");
+  return usdc?.tokenAddress || ARC_TESTNET_USDC;
 }
 
-export async function estimateUsdcSend(fromAddress: string, to: string, amount: string) {
-  return getKit().estimateSend(sendParams(fromAddress, to, amount));
+export async function estimateUsdcSend(wallet: WalletRecord, to: string, amount: string) {
+  const tokenAddress = await usdcTokenAddress(wallet.circleWalletId);
+  return estimateTransfer({
+    walletId: wallet.circleWalletId,
+    to,
+    amount,
+    tokenAddress,
+  });
 }
 
 export async function sendUsdc(input: {
@@ -78,20 +52,48 @@ export async function sendUsdc(input: {
     );
   }
 
-  const estimate = await estimateUsdcSend(input.wallet.address, input.to, input.amount);
-  const result = await getKit().send(sendParams(input.wallet.address, input.to, input.amount));
+  const tokenAddress = await usdcTokenAddress(input.wallet.circleWalletId);
+  let estimate: Record<string, unknown> = {};
+  try {
+    estimate = await estimateTransfer({
+      walletId: input.wallet.circleWalletId,
+      to: input.to,
+      amount: input.amount,
+      tokenAddress,
+    });
+  } catch (error) {
+    estimate = { warning: error instanceof Error ? error.message : "Fee estimate unavailable" };
+  }
+  const created = await createTransfer({
+    walletId: input.wallet.circleWalletId,
+    to: input.to,
+    amount: input.amount,
+    tokenAddress,
+  });
+  const result = await waitForTransfer(created.id);
+  const txHash = result.txHash;
+  const explorerUrl = txHash ? `${config.explorerBase}/tx/${txHash}` : undefined;
 
-  const state = "state" in result ? String(result.state) : "submitted";
-  const txHash = "txHash" in result && typeof result.txHash === "string" ? result.txHash : undefined;
-  const explorerUrl =
-    "explorerUrl" in result && typeof result.explorerUrl === "string"
-      ? result.explorerUrl
-      : txHash
-        ? `${config.explorerBase}/tx/${txHash}`
-        : undefined;
+  if (result.state !== "COMPLETE") {
+    await store.addTransfer({
+      id: created.id,
+      userId: input.userId,
+      fromAddress: input.wallet.address,
+      toAddress: input.to,
+      amount: input.amount,
+      token: "USDC",
+      txHash,
+      explorerUrl,
+      state: result.state,
+      createdAt: new Date().toISOString(),
+    });
+    throw new Error(
+      `Transfer ended in state ${result.state}${txHash ? ` (${txHash})` : ""}. No USDC should be treated as sent unless the explorer shows a success.`,
+    );
+  }
 
   await store.addTransfer({
-    id: randomUUID(),
+    id: created.id || randomUUID(),
     userId: input.userId,
     fromAddress: input.wallet.address,
     toAddress: input.to,
@@ -99,9 +101,9 @@ export async function sendUsdc(input: {
     token: "USDC",
     txHash,
     explorerUrl,
-    state,
+    state: result.state,
     createdAt: new Date().toISOString(),
   });
 
-  return { estimate, result, txHash, explorerUrl, state };
+  return { estimate, result, txHash, explorerUrl, state: result.state };
 }

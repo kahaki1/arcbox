@@ -156,7 +156,7 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
       try {
         const user = await store.getUserById(userId);
         const wallet = await ensureUserWallet(userId, user?.email);
-        const estimate = await estimateUsdcSend(wallet.address, to, amount);
+        const estimate = await estimateUsdcSend(wallet, to, amount);
         return textResult({
           from: wallet.address,
           to,
@@ -204,7 +204,7 @@ export function createMcpServer(authExtra?: Record<string, unknown>): McpServer 
         const user = await store.getUserById(userId);
         const wallet = await ensureUserWallet(userId, user?.email);
         if (!confirm) {
-          const estimate = await estimateUsdcSend(wallet.address, to, amount);
+          const estimate = await estimateUsdcSend(wallet, to, amount);
           return textResult({
             preview: true,
             from: wallet.address,
