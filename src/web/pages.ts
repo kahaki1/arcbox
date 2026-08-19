@@ -115,7 +115,7 @@ export function landingPage(): string {
         <h1>Connect ChatGPT<br>to a USDC wallet.</h1>
         <p class="lede">
           Each ChatGPT user signs in with Google or an email code. Onix maps that email to a Circle
-          developer-controlled wallet on Arc Testnet, then ChatGPT can send USDC through App Kit.
+          developer-controlled wallet on Arc Testnet. ChatGPT can send USDC and pay x402 APIs.
         </p>
         <div class="cta">
           <a class="btn primary" href="/login">Continue with Google or email</a>

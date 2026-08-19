@@ -202,6 +202,52 @@ export async function getTransfer(id: string): Promise<CircleTransfer> {
   return { id: tx.id, state: tx.state ?? "UNKNOWN", txHash: tx.txHash };
 }
 
+export async function signTypedData(walletId: string, data: unknown): Promise<string> {
+  const body = await circleFetch<{ data?: { signature?: string } }>(
+    "/v1/w3s/developer/sign/typedData",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        walletId,
+        data: typeof data === "string" ? data : JSON.stringify(data),
+        entitySecretCiphertext: await entitySecretCiphertext(),
+        blockchain: config.circleBlockchain,
+      }),
+    },
+  );
+  if (!body.data?.signature) {
+    throw new Error("Circle did not return a typed-data signature.");
+  }
+  return body.data.signature;
+}
+
+export async function executeContract(input: {
+  walletId: string;
+  contractAddress: string;
+  abiFunctionSignature: string;
+  abiParameters: Array<string | number>;
+}): Promise<CircleTransfer> {
+  const body = await circleFetch<{ data?: { id?: string; state?: string } }>(
+    "/v1/w3s/developer/transactions/contractExecution",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        idempotencyKey: randomUUID(),
+        entitySecretCiphertext: await entitySecretCiphertext(),
+        walletId: input.walletId,
+        contractAddress: input.contractAddress,
+        abiFunctionSignature: input.abiFunctionSignature,
+        abiParameters: input.abiParameters,
+        feeLevel: "MEDIUM",
+      }),
+    },
+  );
+  if (!body.data?.id) {
+    throw new Error("Circle did not return a contract execution id.");
+  }
+  return waitForTransfer(body.data.id);
+}
+
 export async function waitForTransfer(id: string, timeoutMs = 45000): Promise<CircleTransfer> {
   const terminal = new Set(["COMPLETE", "FAILED", "DENIED", "CANCELLED"]);
   const started = Date.now();

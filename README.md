@@ -1,6 +1,6 @@
 # Onix
 
-A PayBox-style remote MCP server for ChatGPT: each ChatGPT user signs in with OAuth, gets a **Circle developer-controlled wallet** on **Arc Testnet**, and can send **USDC** through [Circle App Kit](https://docs.arc.io/app-kit/send).
+A PayBox-style remote MCP server for ChatGPT: each ChatGPT user signs in with OAuth, gets a **Circle developer-controlled wallet** on **Arc Testnet**, can send **USDC**, and can pay **x402** APIs.
 
 ## What it does
 
@@ -11,7 +11,9 @@ A PayBox-style remote MCP server for ChatGPT: each ChatGPT user signs in with OA
    - `get_wallet` — address, explorer, faucet
    - `get_balance` — USDC on Arc Testnet
    - `estimate_send_usdc` — fee preview
-   - `send_usdc` — App Kit `kit.send()` (requires `confirm: true`)
+   - `send_usdc` — Circle REST transfer (requires `confirm: true`)
+   - `x402_probe` — inspect an HTTP 402 paywall
+   - `x402_pay` — sign and pay an x402 API on Arc Testnet
    - `list_transfers` — recent sends from this app
 
 ## Prerequisites

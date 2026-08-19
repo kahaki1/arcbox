@@ -10,6 +10,7 @@ import { getUserId } from "./auth/session.js";
 import { firebaseConfigured } from "./firebase/admin.js";
 import { circleConfigured, config, issuerUrl, mcpUrl, publicUrl } from "./config.js";
 import { createMcpServer } from "./mcp/server.js";
+import { mountX402 } from "./x402/seller.js";
 import { landingPage } from "./web/pages.js";
 
 process.env.MCP_DANGEROUSLY_ALLOW_INSECURE_ISSUER_URL ??= "true";
@@ -20,8 +21,17 @@ app.use(
   cors({
     origin: true,
     credentials: true,
-    exposedHeaders: ["WWW-Authenticate", "Mcp-Session-Id"],
-    allowedHeaders: ["Authorization", "Content-Type", "Mcp-Session-Id", "Last-Event-ID", "MCP-Protocol-Version"],
+    allowedHeaders: [
+      "Authorization",
+      "Content-Type",
+      "Mcp-Session-Id",
+      "Last-Event-ID",
+      "MCP-Protocol-Version",
+      "X-PAYMENT",
+      "PAYMENT-SIGNATURE",
+      "X-Onix-Wallet-Id",
+    ],
+    exposedHeaders: ["WWW-Authenticate", "Mcp-Session-Id", "PAYMENT-REQUIRED"],
   }),
 );
 app.use(express.json());
@@ -97,6 +107,7 @@ app.get("/health", (_req, res) => {
 });
 
 mountAuthPages(app);
+mountX402(app);
 
 const resourceMetadataUrl = new URL("/.well-known/oauth-protected-resource/mcp", issuerUrl).href;
 

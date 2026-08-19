@@ -24,6 +24,10 @@ export const config = {
   faucetUrl: "https://faucet.circle.com",
   scopes: ["openid", "email", "wallet", "wallet:send"] as const,
   resendApiKey: process.env.RESEND_API_KEY?.trim() ?? "",
+  x402PayTo: process.env.X402_PAY_TO?.trim() ?? "",
+  arcChainId: 5042002,
+  arcNetwork: "eip155:5042002",
+  arcUsdc: "0x3600000000000000000000000000000000000000",
 };
 
 export const publicUrl = new URL(config.publicUrl);
