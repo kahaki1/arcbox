@@ -1,6 +1,8 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import { mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
@@ -93,7 +95,15 @@ app.use(
   }),
 );
 
+const publicDir = join(process.cwd(), "public");
+app.use(express.static(publicDir, { index: false }));
+
 app.get("/", (_req, res) => {
+  const indexPath = join(publicDir, "index.html");
+  if (existsSync(indexPath)) {
+    res.sendFile(indexPath);
+    return;
+  }
   res.type("html").send(landingPage());
 });
 

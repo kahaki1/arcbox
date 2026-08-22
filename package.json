@@ -6,8 +6,10 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:web": "vite --config web/vite.config.js",
     "start": "tsx src/index.ts",
-    "build": "tsc --noEmit",
+    "build": "npm run build:web && tsc --noEmit",
+    "build:web": "vite build --config web/vite.config.js",
     "typecheck": "tsc --noEmit"
   },
   "engines": {
@@ -24,10 +26,18 @@
     "express": "^5.1.0",
     "firebase-admin": "^13.4.0",
     "jose": "^6.0.11",
+    "lucide-react": "^0.511.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.9",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "vite": "^7.1.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^22.17.0",

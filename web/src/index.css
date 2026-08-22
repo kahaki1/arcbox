@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #fafafa;
+  color: #16161a;
+  font-family: Inter, system-ui, sans-serif;
+}

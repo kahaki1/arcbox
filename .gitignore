@@ -1,6 +1,8 @@
 node_modules/
 dist/
 data/
+public/assets/
+public/index.html
 .env
 .env.local
 .env*.local
